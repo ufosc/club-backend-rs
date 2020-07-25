@@ -1,3 +1,5 @@
+mod auth;
+
 #[macro_use]
 extern crate diesel;
 
@@ -10,12 +12,14 @@ use log::{info};
 
 mod models;
 mod schema;
+mod errors;
+mod auth_handler;
 mod user_handler;
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
     dotenv::dotenv().ok();
-    env_logger::from_env(Env::default().default_filter_or("info")).init();
+    env_logger::from_env(Env::default().default_filter_or("debug")).init();
 
     info!("Creating database connection pool");
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set.");
@@ -34,7 +38,9 @@ async fn main() -> std::io::Result<()> {
             .data(pool.clone())
             .wrap(Logger::default())
             .service(
-                web::scope("/api").service(web::scope("/users").configure(user_handler::config)),
+                web::scope("/api")
+                    .service(web::scope("/users").configure(user_handler::config))
+                    .service(web::scope("/auth").configure(auth_handler::config)),
             )
             .route("/ping", web::get().to(|| HttpResponse::Ok().body("pong")))
     })
