@@ -1,0 +1,15 @@
+[package]
+name = "club_backend"
+version = "0.1.0"
+authors = ["Hunter Jarrell <hjarrell555@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+actix-web = "2.0"
+actix-rt = "1.1"
+diesel = { version = "1.4", features = ["postgres", "sqlite"] }
+dotenv = "0.15"
+serde = { version = "1.0", features = ["derive"]}
+serde_json  = "1.0"
