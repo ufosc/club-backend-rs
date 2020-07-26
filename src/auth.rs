@@ -1,6 +1,7 @@
 use bcrypt::{verify, DEFAULT_COST, hash, BcryptResult};
+use jsonwebtoken::{Algorithm, encode, Header, EncodingKey};
 use log::{debug, error};
-use crate::models::{RegisterRequest, NewUser};
+use crate::models::{RegisterRequest, NewUser, User, TokenClaims};
 
 pub fn password_matches(password: &String, password_hash: &String) -> bool {
     debug!("Verifying password");
@@ -32,3 +33,18 @@ fn hash_password(password: &String) -> BcryptResult<String> {
     hash(password, DEFAULT_COST)
 }
 
+fn make_claim(user: &User) -> TokenClaims {
+    TokenClaims {
+        user_id: user.user_id,
+    }
+}
+
+pub fn sign_token(user: &User, signing_key: &String) -> Option<String> {
+    match encode(&Header::new(Algorithm::HS512), &make_claim(user), &EncodingKey::from_secret(signing_key.as_bytes())) {
+        Ok(token) => Some(token),
+        Err(e) => {
+            error!("Error encoding JWT token, {}", e);
+            None
+        }
+    }
+}

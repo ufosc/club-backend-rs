@@ -4,13 +4,16 @@ use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 
 use crate::auth;
 use crate::errors::Errors;
-use crate::models::{LoginRequest, Pool, RegisterRequest, User};
+use crate::models::{LoginRequest, Pool, RegisterRequest, User, JWT};
 use crate::schema::users::dsl::{username, users};
 
 #[post("/register")]
-pub async fn register(register_req: web::Json<RegisterRequest>, pool: web::Data<Pool>) -> impl Responder {
+pub async fn register(register_req: web::Json<RegisterRequest>, pool: web::Data<Pool>, signing_key: web::Data<String>) -> impl Responder {
     match web::block(move || insert_user(register_req.into_inner(), pool)).await {
-        Ok(user) => Ok(user.username),
+        Ok(user) => match auth::sign_token(&user, signing_key.get_ref()) {
+            Some(token) => Ok(JWT {token}),
+            None => Err(Errors::InternalServerError)
+        },
         Err(e) => match e {
             BlockingError::Error(service_error) => Err(Errors::from(service_error)),
             BlockingError::Canceled => Err(Errors::InternalServerError),
@@ -19,11 +22,12 @@ pub async fn register(register_req: web::Json<RegisterRequest>, pool: web::Data<
 }
 
 #[post("/login")]
-pub async fn login(login_req: web::Json<LoginRequest>, pool: web::Data<Pool>) -> impl Responder {
+pub async fn login(login_req: web::Json<LoginRequest>, pool: web::Data<Pool>, signing_key: web::Data<String>) -> impl Responder {
     match web::block(move || query_user(login_req.into_inner(), pool)).await {
-        Ok(user) => {
-            Ok(user.username)
-        }
+        Ok(user) => match auth::sign_token(&user, signing_key.get_ref()) {
+            Some(token) => Ok(JWT {token}),
+            None => Err(Errors::InternalServerError)
+        },
         Err(e) => match e {
             BlockingError::Error(service_error) => Err(service_error),
             BlockingError::Canceled => Err(Errors::InternalServerError),

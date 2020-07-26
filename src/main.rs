@@ -36,6 +36,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .data(pool.clone())
+            .data(std::env::var("SIGNING_SECRET").expect("SIGNING_SECRET must be set."))
             .wrap(Logger::default())
             .service(
                 web::scope("/api")
